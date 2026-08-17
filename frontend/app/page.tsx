@@ -140,7 +140,7 @@ export default function HomePage() {
       const res = await fetch('/api/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ article }),
+        body: JSON.stringify({ article: cleanArticle }),
       });
 
       if (!res.ok) {

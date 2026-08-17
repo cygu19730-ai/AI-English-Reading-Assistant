@@ -8,7 +8,8 @@ import trafilatura
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator
+from typing import Any, Optional
 
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
@@ -26,6 +27,11 @@ SYSTEM_PROMPT = """你是一位考研英语精读辅导老师。请对用户提�
 
 严格按以下 JSON 结构返回（不要输出 Markdown 代码块或其他多余文字）：
 {
+  "article_meta": {
+    "topic": "文章主题（英文，如 Technology / Education / Society / Economics）",
+    "core_argument": "文章核心论点（1-2 句英文概括）",
+    "difficulty_score": 4.0
+  },
   "segments": [
     {
       "original_text": "原文段落",
@@ -87,7 +93,9 @@ SYSTEM_PROMPT = """你是一位考研英语精读辅导老师。请对用户提�
    - 如果某段不适合出题，exercises 里的对应数组可以为空
 6. multiple_choice 的 options 必须是 4 个，且以 "A. "、"B. "、"C. "、"D. " 开头
 7. multiple_choice 的 answer 字段只能填 "A"、"B"、"C" 或 "D"，不要填完整选项内容
-8. 只返回合法 JSON，字段名必须与上述一致。
+8. article_meta 的 difficulty_score 是 1-5 的浮点数，根据词汇难度、句法复杂度、文章长度综合判断
+9. article_meta 的 topic 用英文返回，core_argument 用英文概括
+10. 只返回合法 JSON，字段名必须与上述一致。
 """
 
 
@@ -123,7 +131,6 @@ class MultipleChoice(BaseModel):
     @classmethod
     def normalize_answer(cls, v: str) -> str:
         v_upper = v.strip().upper()
-        # 如果模型返回的是 "A. xxx" 这种完整选项，只取首字母
         if len(v_upper) > 1 and v_upper[0] in ("A", "B", "C", "D"):
             return v_upper[0]
         if v_upper not in ("A", "B", "C", "D"):
@@ -133,7 +140,6 @@ class MultipleChoice(BaseModel):
     @field_validator("options")
     @classmethod
     def normalize_options(cls, v: list[str]) -> list[str]:
-        # 如果选项没有 A. B. C. D. 前缀，自动补上
         for i, opt in enumerate(v):
             expected = chr(ord("A") + i)
             stripped = opt.strip()
@@ -163,7 +169,14 @@ class Segment(BaseModel):
     exercises: Exercises = Field(default_factory=Exercises)
 
 
+class ArticleMeta(BaseModel):
+    topic: str = Field(default="", description="文章主题")
+    core_argument: str = Field(default="", description="核心论点")
+    difficulty_score: float = Field(default=3.0, ge=1.0, le=5.0, description="难度分数 1-5")
+
+
 class ParseResponse(BaseModel):
+    article_meta: Optional[ArticleMeta] = Field(default=None, description="文章级元信息")
     segments: list[Segment] = Field(..., min_length=1)
 
 
@@ -192,9 +205,11 @@ def get_api_key() -> str:
         )
     return api_key
 
-
-def parse_model_json(content: str) -> dict[str, Any]:
+def repair_json(content: str) -> str:
+    """尝试修复常见的 JSON 语法错误"""
     text = content.strip()
+    
+    # 去掉 Markdown 代码块
     if text.startswith("```"):
         lines = text.splitlines()
         if lines and lines[0].startswith("```"):
@@ -202,7 +217,42 @@ def parse_model_json(content: str) -> dict[str, Any]:
         if lines and lines[-1].strip().startswith("```"):
             lines = lines[:-1]
         text = "\n".join(lines).strip()
-    return json.loads(text)
+    
+    # 修复缺失逗号：数字或字符串后面直接跟换行 + 引号/花括号
+    import re
+    # 行尾是数字但没有逗号，下一行以引号开头
+    text = re.sub(r'(\d+)\s*\n\s*"', r'\1,\n  "', text)
+    # 行尾是 } 但没有逗号，下一行以 " 开头
+    text = re.sub(r'}\s*\n\s*"', r'},\n  "', text)
+    # 行尾是 ] 但没有逗号，下一行以 " 开头
+    text = re.sub(r'\]\s*\n\s*"', r'],\n  "', text)
+    # 字符串后面直接跟 }
+    text = re.sub(r'"\s*\n\s*}', '"\n  }', text)
+    
+    return text
+
+def parse_model_json(content: str) -> dict[str, Any]:
+    text = repair_json(content)
+    
+    # 先尝试直接解析
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    
+    # 如果失败，尝试更激进的修复
+    try:
+        # 找到第一个 { 和最后一个 }
+        start = text.find("{")
+        end = text.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            text = text[start:end+1]
+            return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    
+    # 还是失败，抛出原始错误
+    raise json.JSONDecodeError("无法解析 JSON", content, 0)
 
 
 def call_deepseek_api(article: str) -> dict[str, Any]:
@@ -324,7 +374,7 @@ def parse_article(body: ParseRequest) -> ParseResponse:
         traceback.print_exc()
         raise HTTPException(
             status_code=502,
-            detail=f"模型返回的内容不是合法 JSON。原始内容：{raw[:500]}",
+            detail=f"模型返回的内容不是合法 JSON。原始内容：{raw[:2000]}",
         )
 
     segments = data.get("segments")
@@ -340,6 +390,14 @@ def parse_article(body: ParseRequest) -> ParseResponse:
             status_code=502,
             detail=f"模型输出未通过 Schema Validation：{str(e)[:500]}",
         )
+
+    # Step 2.5: 解析 article_meta（可选，失败不阻断）
+    article_meta_raw = data.get("article_meta")
+    if article_meta_raw and isinstance(article_meta_raw, dict):
+        try:
+            parsed_response.article_meta = ArticleMeta(**article_meta_raw)
+        except Exception:
+            print(f"[Warning] article_meta 解析失败，已忽略: {article_meta_raw}")
 
     # Step 3: 内容质量检查
     total_mc = 0
@@ -364,7 +422,7 @@ def parse_article(body: ParseRequest) -> ParseResponse:
             detail="模型输出没有任何练习题，请重试。",
         )
 
-    print(f"[Parse Success] {len(parsed_response.segments)} 段 | {total_mc} 单选题 | {total_translation} 翻译题")
+    print(f"[Parse Success] {len(parsed_response.segments)} 段 | {total_mc} 单选题 | {total_translation} 翻译题 | meta: {parsed_response.article_meta is not None}")
 
     return parsed_response
 

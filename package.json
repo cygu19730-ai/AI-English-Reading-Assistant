@@ -1,0 +1,12 @@
+{
+  "name": "english-reader",
+  "version": "1.0.0",
+  "description": "考研外刊 AI 精读解析器",
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"cd backend && python main.py\" \"cd frontend && npm run dev\"",
+    "install:all": "cd backend && pip install -r requirements.txt && cd ../frontend && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.4"
+  }
+}

@@ -9,6 +9,10 @@ import {
   removeVocabWord,
   type VocabWord,
 } from '../../utils/vocab';
+import {
+  recordExerciseResult,
+  updateLatestArticleDifficulty,
+} from '../../utils/studyLog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -219,6 +223,12 @@ function MultipleChoiceItem({ item, index, idPrefix }: { item: MultipleChoice; i
 
   const isCorrect = selected.trim().charAt(0).toUpperCase() === item.answer.trim().charAt(0).toUpperCase();
 
+  const handleSubmit = () => {
+    if (!selected) return;
+    recordExerciseResult(isCorrect);
+    setSubmitted(true);
+  };
+
   return (
     <Card className="bg-white border-slate-200/80 shadow-xs rounded-xl overflow-hidden">
       <CardContent className="p-4 space-y-3">
@@ -242,7 +252,7 @@ function MultipleChoiceItem({ item, index, idPrefix }: { item: MultipleChoice; i
           ))}
         </div>
         {!submitted ? (
-          <Button size="sm" onClick={() => selected && setSubmitted(true)} disabled={!selected} className="w-full bg-slate-900 hover:bg-slate-800 text-xs py-1.5">提交答案</Button>
+          <Button size="sm" onClick={handleSubmit} disabled={!selected} className="w-full bg-slate-900 hover:bg-slate-800 text-xs py-1.5">提交答案</Button>
         ) : (
           <div className={`p-3 rounded-lg text-xs leading-relaxed border ${isCorrect ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-rose-50 border-rose-200 text-rose-900'}`}>
             <p className="font-semibold mb-1">{isCorrect ? '✓ 回答正确' : '✗ 回答错误'} · 正确答案：{item.answer}</p>
@@ -454,6 +464,7 @@ export default function ResultPage() {
             calculated.llm_core_argument = parsed.article_meta.core_argument;
           }
 
+          updateLatestArticleDifficulty(calculated.difficulty_level);
           setMeta(calculated);
         }
       }
@@ -489,7 +500,11 @@ export default function ResultPage() {
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4 p-4">
         <div className="p-4 rounded-full bg-slate-100 text-3xl">📄</div>
         <p className="text-slate-600 text-sm font-medium">未检测到解析数据，请先提交文章</p>
-        <Button render={<Link href="/" />} className="bg-indigo-600 hover:bg-indigo-700 text-xs">返回首页提交</Button>
+        <Link href="/">
+        <Button className="bg-indigo-600 hover:bg-indigo-700 text-xs">
+          返回首页提交
+        </Button>
+    </Link>
       </div>
     );
   }
@@ -522,7 +537,9 @@ export default function ResultPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" className="text-slate-300 hover:bg-slate-800 hover:text-white text-xs gap-1.5" onClick={() => setVocabOpen(true)}><span>⭐</span> 生词本</Button>
-            <Button variant="ghost" size="sm" className="text-slate-300 hover:bg-slate-800 hover:text-white text-xs" render={<Link href="/" />}>返回首页</Button>
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="text-slate-300 hover:bg-slate-800 hover:text-white text-xs">返回首页</Button>
+            </Link>
           </div>
         </div>
       </nav>

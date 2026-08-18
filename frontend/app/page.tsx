@@ -10,6 +10,22 @@ import {
   getMasteryLabel,
   type VocabWord,
 } from '../utils/vocab';
+import {
+  getStudyLog,
+  getArticleHistory,
+  getCorrectRate,
+  recordArticleRead,
+  recordReview,
+} from '../utils/studyLog';
+import {
+  getUserProfile,
+  saveUserProfile,
+  getProfileLabel,
+  type ExamType,
+  type Level,
+} from '../utils/userProfile';
+
+// ========== 生词本弹窗 ==========
 
 function VocabModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [list, setList] = useState<VocabWord[]>([]);
@@ -39,6 +55,7 @@ function VocabModal({ open, onClose }: { open: boolean; onClose: () => void }) {
     const currentWord = dueWords[currentIndex];
     if (!currentWord) return;
     reviewWord(currentWord.word, isCorrect);
+    recordReview();
     setRevealed(false);
     if (currentIndex < dueWords.length - 1) {
       setCurrentIndex(currentIndex + 1);
@@ -53,7 +70,6 @@ function VocabModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col overflow-hidden border border-slate-100" onClick={(e) => e.stopPropagation()}>
-        {/* 头部 */}
         <div className="flex items-center justify-between px-6 py-4 bg-slate-900 text-white">
           <div className="flex items-center gap-2">
             <span className="text-lg">⭐</span>
@@ -62,7 +78,6 @@ function VocabModal({ open, onClose }: { open: boolean; onClose: () => void }) {
           <button type="button" onClick={onClose} className="text-slate-400 hover:text-white text-xl leading-none px-1" aria-label="关闭">×</button>
         </div>
 
-        {/* 到期复习提示 */}
         {dueWords.length > 0 && !reviewMode && (
           <div className="px-6 py-3 bg-amber-50 border-b border-amber-100 flex items-center justify-between">
             <p className="text-sm font-semibold text-amber-800">📅 {dueWords.length} 个单词到期复习</p>
@@ -76,7 +91,6 @@ function VocabModal({ open, onClose }: { open: boolean; onClose: () => void }) {
           </div>
         )}
 
-        {/* 复习模式 */}
         {reviewMode && dueWords.length > 0 ? (
           <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col items-center justify-center gap-5">
             <p className="text-xs text-slate-400 font-mono">{currentIndex + 1} / {dueWords.length}</p>
@@ -85,8 +99,6 @@ function VocabModal({ open, onClose }: { open: boolean; onClose: () => void }) {
               {dueWords[currentIndex].phonetic && (
                 <p className="text-sm text-slate-400 font-serif mb-4">{dueWords[currentIndex].phonetic}</p>
               )}
-
-              {/* 答案区域 - 仅在 revealed 时显示 */}
               {revealed ? (
                 <div className="p-4 bg-slate-50 rounded-xl max-w-sm mx-auto border border-slate-100">
                   <p className="text-base text-slate-700 font-medium">{dueWords[currentIndex].meaning}</p>
@@ -101,7 +113,6 @@ function VocabModal({ open, onClose }: { open: boolean; onClose: () => void }) {
               )}
             </div>
 
-            {/* 按钮区 */}
             {!revealed ? (
               <div className="flex gap-3">
                 <button
@@ -139,7 +150,6 @@ function VocabModal({ open, onClose }: { open: boolean; onClose: () => void }) {
             )}
           </div>
         ) : (
-          /* 普通列表模式 */
           <div className="overflow-y-auto px-6 py-4 space-y-3 bg-slate-50/50 flex-1">
             {reviewMode && dueWords.length === 0 && (
               <p className="text-center text-sm text-slate-400 py-8">🎉 暂无到期单词</p>
@@ -183,12 +193,247 @@ function VocabModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   );
 }
 
+// ========== 用户画像弹窗 ==========
+
+function ProfileModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [examType, setExamType] = useState<ExamType>('kaoyan');
+  const [level, setLevel] = useState<Level>('intermediate');
+  const [targetScore, setTargetScore] = useState('');
+
+  useEffect(() => {
+    if (open) {
+      const p = getUserProfile();
+      if (p) {
+        setExamType(p.examType);
+        setLevel(p.level);
+        setTargetScore(p.targetScore);
+      }
+    }
+  }, [open]);
+
+  const handleSave = () => {
+    saveUserProfile({
+      examType,
+      level,
+      targetScore: targetScore.trim(),
+      createdAt: new Date().toISOString(),
+    });
+    onClose();
+  };
+
+  if (!open) return null;
+
+  const examOptions: Array<{ value: ExamType; label: string }> = [
+    { value: 'kaoyan', label: '考研英语' },
+    { value: 'cet6', label: 'CET-6' },
+    { value: 'ielts', label: 'IELTS' },
+    { value: 'toefl', label: 'TOEFL' },
+  ];
+
+  const levelOptions: Array<{ value: Level; label: string }> = [
+    { value: 'basic', label: '基础' },
+    { value: 'intermediate', label: '中等' },
+    { value: 'advanced', label: '较强' },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 bg-slate-900 text-white">
+          <h2 className="text-base font-semibold">🎯 你的英语学习目标</h2>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-white text-xl leading-none px-1" aria-label="关闭">×</button>
+        </div>
+
+        <div className="px-6 py-5 space-y-5">
+          <div>
+            <p className="text-sm font-semibold text-slate-700 mb-2">备考方向</p>
+            <div className="grid grid-cols-2 gap-2">
+              {examOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setExamType(opt.value)}
+                  className={`px-4 py-2.5 text-sm rounded-xl border transition-all font-medium ${
+                    examType === opt.value
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
+                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-indigo-300'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold text-slate-700 mb-2">当前水平</p>
+            <div className="grid grid-cols-3 gap-2">
+              {levelOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setLevel(opt.value)}
+                  className={`px-4 py-2.5 text-sm rounded-xl border transition-all font-medium ${
+                    level === opt.value
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-md'
+                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-indigo-300'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold text-slate-700 mb-2">目标分数（可选）</p>
+            <input
+              type="text"
+              value={targetScore}
+              onChange={(e) => setTargetScore(e.target.value)}
+              placeholder="如：考研英语 75+ 或 IELTS 7.0"
+              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSave}
+            className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-colors shadow-md"
+          >
+            保存画像
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ========== 学习记录弹窗 ==========
+
+function StudyLogModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  if (!open) return null;
+
+  const log = getStudyLog();
+  const history = getArticleHistory();
+  const list = getVocabList();
+  const mastered = list.filter((item) => item.mastery >= 4).length;
+  const vocabStats = {
+    total: list.length,
+    mastered,
+    toReview: Math.max(list.length - mastered, 0),
+  };
+
+  const correctRate = getCorrectRate();
+  const difficultyLabel = (difficulty: string) => difficulty.split(' ')[0] || '待评级';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[85vh] flex flex-col overflow-hidden border border-slate-100" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 bg-slate-900 text-white">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">📊</span>
+            <h2 className="text-base font-semibold">学习记录</h2>
+          </div>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-white text-xl leading-none px-1" aria-label="关闭">×</button>
+        </div>
+
+        <div className="overflow-y-auto px-6 py-5 space-y-5 bg-slate-50/50 flex-1">
+          <section>
+            <h3 className="text-sm font-bold text-slate-700 mb-2">📰 阅读</h3>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-white rounded-xl border border-slate-100 p-3 text-center">
+                <p className="text-lg font-bold text-slate-900">{log.totalArticles}</p>
+                <p className="text-[10px] text-slate-400">解析文章</p>
+              </div>
+              <div className="bg-white rounded-xl border border-slate-100 p-3 text-center">
+                <p className="text-lg font-bold text-slate-900">{log.totalWords.toLocaleString()}</p>
+                <p className="text-[10px] text-slate-400">累计阅读词</p>
+              </div>
+              <div className="bg-white rounded-xl border border-slate-100 p-3 text-center">
+                <p className="text-lg font-bold text-slate-900">{log.totalReviews}</p>
+                <p className="text-[10px] text-slate-400">复习次数</p>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-bold text-slate-700 mb-2">📚 词汇</h3>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-blue-50 rounded-xl border border-blue-100 p-3 text-center">
+                <p className="text-lg font-bold text-blue-700">{vocabStats.total}</p>
+                <p className="text-[10px] text-blue-500">累计收录</p>
+              </div>
+              <div className="bg-emerald-50 rounded-xl border border-emerald-100 p-3 text-center">
+                <p className="text-lg font-bold text-emerald-700">{vocabStats.mastered}</p>
+                <p className="text-[10px] text-emerald-500">已掌握</p>
+              </div>
+              <div className="bg-amber-50 rounded-xl border border-amber-100 p-3 text-center">
+                <p className="text-lg font-bold text-amber-700">{vocabStats.toReview}</p>
+                <p className="text-[10px] text-amber-500">待复习</p>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-bold text-slate-700 mb-2">✏️ 练习</h3>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-white rounded-xl border border-slate-100 p-3 text-center">
+                <p className="text-lg font-bold text-slate-900">{log.totalExercisesCompleted}<span className="text-xs font-normal text-slate-400"> 题</span></p>
+                <p className="text-[10px] text-slate-400">完成练习</p>
+              </div>
+              <div className="bg-white rounded-xl border border-slate-100 p-3 text-center">
+                <p className="text-lg font-bold text-emerald-600">{correctRate}%</p>
+                <p className="text-[10px] text-slate-400">正确率</p>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-sm font-bold text-slate-700 mb-2">🕘 最近阅读</h3>
+            {history.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-2xl mb-1">📄</p>
+                <p className="text-xs text-slate-400">暂无阅读记录</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {history.slice(0, 5).map((item) => (
+                  <div key={item.id} className="flex items-center justify-between gap-3 p-3 bg-white rounded-xl border border-slate-100">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-xs font-semibold text-slate-700 truncate">{item.title}</p>
+                        <span className="text-[11px] text-amber-500 shrink-0">{difficultyLabel(item.difficulty)}</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        {item.wordCount} 词 · {new Date(item.date).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span className={`shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full ${item.status === 'completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                      {item.status === 'completed' ? '已完成' : '复习中'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ========== 主页面 ==========
+
 export default function HomePage() {
   const [article, setArticle] = useState('');
   const [loading, setLoading] = useState(false);
   const [vocabOpen, setVocabOpen] = useState(false);
+  const [studyOpen, setStudyOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [url, setUrl] = useState('');
   const [fetchingUrl, setFetchingUrl] = useState(false);
+  const [articleTitle, setArticleTitle] = useState('');
   const router = useRouter();
 
   const handleFetchUrl = async () => {
@@ -217,6 +462,7 @@ export default function HomePage() {
         .replace(/[\u2013\u2014]/g, '-')
         .replace(/[\x00-\x1F\x7F-\x9F]/g, '');
       setArticle(cleanText);
+      setArticleTitle(data.title || '外刊精读');
 
       alert(`抓取成功！文章标题：${data.title}，共 ${data.word_count} 词`);
     } catch (e) {
@@ -240,10 +486,11 @@ export default function HomePage() {
 
     setLoading(true);
     try {
+      const profile = getUserProfile();
       const res = await fetch('/api/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ article: cleanArticle }),
+        body: JSON.stringify({ article: cleanArticle, profile }),
       });
 
       if (!res.ok) {
@@ -253,6 +500,8 @@ export default function HomePage() {
 
       const data = await res.json();
       sessionStorage.setItem('parseResult', JSON.stringify(data));
+      const wordCount = cleanArticle.split(/\s+/).filter(Boolean).length;
+      recordArticleRead(wordCount, articleTitle.trim() || '外刊精读');
       router.push('/result');
     } catch (e) {
       alert(e instanceof Error ? e.message : '解析失败，请稍后重试');
@@ -271,12 +520,21 @@ export default function HomePage() {
           </div>
           <div className="flex items-center gap-3">
             <button
+              onClick={() => setProfileOpen(true)}
+              className="px-3 py-1.5 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            >
+              {getUserProfile() ? `🎯 ${getProfileLabel()}` : '设置目标'}
+            </button>
+            <button
               onClick={() => setVocabOpen(true)}
               className="px-3 py-1.5 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             >
               我的词汇本
             </button>
-            <button className="px-3 py-1.5 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+            <button
+              onClick={() => setStudyOpen(true)}
+              className="px-3 py-1.5 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            >
               学习记录
             </button>
           </div>
@@ -339,6 +597,8 @@ export default function HomePage() {
       </main>
 
       <VocabModal open={vocabOpen} onClose={() => setVocabOpen(false)} />
+      <StudyLogModal open={studyOpen} onClose={() => setStudyOpen(false)} />
+      <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
     </div>
   );
 }

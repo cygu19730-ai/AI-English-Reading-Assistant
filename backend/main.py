@@ -182,6 +182,7 @@ class ParseResponse(BaseModel):
 
 class ParseRequest(BaseModel):
     article: str = Field(..., min_length=1, description="英文文章全文")
+    profile: Optional[dict] = Field(default=None, description="用户画像")
 
 
 class UrlParseRequest(BaseModel):
@@ -255,7 +256,60 @@ def parse_model_json(content: str) -> dict[str, Any]:
     raise json.JSONDecodeError("无法解析 JSON", content, 0)
 
 
-def call_deepseek_api(article: str) -> dict[str, Any]:
+def build_profile_prompt(profile: Optional[dict]) -> str:
+    """根据前端用户画像生成个性化解析提示词。"""
+    if not profile:
+        return ""
+
+    exam_type = profile.get("examType", "kaoyan")
+    level = profile.get("level", "intermediate")
+    target = profile.get("targetScore", "")
+
+    exam_map = {
+        "kaoyan": "考研英语",
+        "cet6": "CET-6",
+        "ielts": "IELTS",
+        "toefl": "TOEFL",
+    }
+    level_map = {
+        "basic": "基础较弱",
+        "intermediate": "中等水平",
+        "advanced": "基础较强",
+    }
+
+    prompt = f"""
+用户画像：
+- 备考方向：{exam_map.get(exam_type, "考研英语")}
+- 英语水平：{level_map.get(level, "中等水平")}
+- 目标分数：{target if target else "未指定"}
+
+个性化调整要求：
+"""
+    if level == "basic":
+        prompt += """
+- 词汇解释要更详细，每个重点词给出 1 个例句
+- 长难句分析要拆解到最细，标注主干和修饰成分
+- 段落翻译要更直白，更贴近字面意思
+- 练习题难度略低于考研真题
+"""
+    elif level == "intermediate":
+        prompt += """
+- 词汇解释保持标准，重点标注熟词僻义
+- 长难句分析拆解主干和关键从句
+- 段落翻译流畅自然
+- 练习题难度贴近考研真题
+"""
+    else:
+        prompt += """
+- 减少基础词汇，重点强化熟词僻义和高级表达
+- 长难句分析只标注最难的部分，不拆太细
+- 段落翻译偏文学化，强调信达雅
+- 练习题难度略高于考研真题，侧重逻辑推断题
+"""
+    return prompt
+
+
+def call_deepseek_api(article: str, profile: Optional[dict] = None) -> dict[str, Any]:
     api_key = get_api_key()
     url = "https://api.deepseek.com/chat/completions"
 
@@ -267,7 +321,7 @@ def call_deepseek_api(article: str) -> dict[str, Any]:
     payload = {
         "model": "deepseek-chat",
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": SYSTEM_PROMPT + build_profile_prompt(profile)},
             {"role": "user", "content": article},
         ],
         "temperature": 0.3,
@@ -357,7 +411,7 @@ def parse_article(body: ParseRequest) -> ParseResponse:
     if not article:
         raise HTTPException(status_code=400, detail="article 不能为空。")
 
-    result = call_deepseek_api(article)
+    result = call_deepseek_api(article, body.profile)
 
     choices = result.get("choices")
     if not choices or len(choices) == 0:

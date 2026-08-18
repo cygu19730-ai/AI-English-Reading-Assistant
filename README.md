@@ -14,13 +14,13 @@ markdown
 
 > 本地运行后访问 `http://localhost:3000`
 
-### 界面截图（待补充）
+### 界面截图
 
-### ![开始界面](F:\AI-PROJECT\english-reader\images\onset.png)
+### ![开始界面](images/onset.png)
 
 
 
-![结果界面](F:\AI-PROJECT\english-reader\images\result.png)
+![结果界面](images/result.png)
 
 ---
 

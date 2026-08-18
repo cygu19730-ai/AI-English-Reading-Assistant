@@ -2,14 +2,27 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getVocabList, removeVocabWord, type VocabWord } from '../utils/vocab';
+import {
+  getVocabList,
+  removeVocabWord,
+  getDueWords,
+  reviewWord,
+  getMasteryLabel,
+  type VocabWord,
+} from '../utils/vocab';
 
 function VocabModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [list, setList] = useState<VocabWord[]>([]);
+  const [reviewMode, setReviewMode] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
     if (open) {
       setList(getVocabList());
+      setReviewMode(false);
+      setCurrentIndex(0);
+      setRevealed(false);
     }
   }, [open]);
 
@@ -20,60 +33,151 @@ function VocabModal({ open, onClose }: { open: boolean; onClose: () => void }) {
     setList(getVocabList());
   };
 
-  const displayList = list.slice(0, 20);
+  const dueWords = getDueWords();
+
+  const goNext = (isCorrect: boolean) => {
+    const currentWord = dueWords[currentIndex];
+    if (!currentWord) return;
+    reviewWord(currentWord.word, isCorrect);
+    setRevealed(false);
+    if (currentIndex < dueWords.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    } else {
+      setReviewMode(false);
+      setList(getVocabList());
+    }
+  };
+
+  const displayList = list.slice(0, 30);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-800">我的词汇本</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl leading-none px-1"
-            aria-label="关闭"
-          >
-            ×
-          </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col overflow-hidden border border-slate-100" onClick={(e) => e.stopPropagation()}>
+        {/* 头部 */}
+        <div className="flex items-center justify-between px-6 py-4 bg-slate-900 text-white">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">⭐</span>
+            <h2 className="text-base font-semibold">生词本与核心积累</h2>
+          </div>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-white text-xl leading-none px-1" aria-label="关闭">×</button>
         </div>
-        <div className="overflow-y-auto px-6 py-4 space-y-3">
-          {displayList.length === 0 ? (
-            <p className="text-center text-gray-400 py-8">暂无收藏单词</p>
-          ) : (
-            displayList.map((item) => (
-              <div
-                key={item.word}
-                className="flex items-start justify-between gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline gap-2 flex-wrap">
-                    <span className="font-semibold text-gray-800">{item.word}</span>
-                    {item.phonetic ? (
-                      <span className="text-sm text-gray-500">{item.phonetic}</span>
-                    ) : null}
-                  </div>
-                  <p className="text-sm text-gray-600 mt-1">{item.meaning}</p>
-                  {item.synonym ? (
-                    <p className="text-xs text-gray-400 mt-0.5">近义：{item.synonym}</p>
-                  ) : null}
+
+        {/* 到期复习提示 */}
+        {dueWords.length > 0 && !reviewMode && (
+          <div className="px-6 py-3 bg-amber-50 border-b border-amber-100 flex items-center justify-between">
+            <p className="text-sm font-semibold text-amber-800">📅 {dueWords.length} 个单词到期复习</p>
+            <button
+              type="button"
+              onClick={() => { setReviewMode(true); setCurrentIndex(0); setRevealed(false); }}
+              className="px-4 py-1.5 text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors"
+            >
+              开始复习
+            </button>
+          </div>
+        )}
+
+        {/* 复习模式 */}
+        {reviewMode && dueWords.length > 0 ? (
+          <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col items-center justify-center gap-5">
+            <p className="text-xs text-slate-400 font-mono">{currentIndex + 1} / {dueWords.length}</p>
+            <div className="text-center w-full">
+              <p className="text-3xl font-bold text-slate-900 mb-2">{dueWords[currentIndex].word}</p>
+              {dueWords[currentIndex].phonetic && (
+                <p className="text-sm text-slate-400 font-serif mb-4">{dueWords[currentIndex].phonetic}</p>
+              )}
+
+              {/* 答案区域 - 仅在 revealed 时显示 */}
+              {revealed ? (
+                <div className="p-4 bg-slate-50 rounded-xl max-w-sm mx-auto border border-slate-100">
+                  <p className="text-base text-slate-700 font-medium">{dueWords[currentIndex].meaning}</p>
+                  {dueWords[currentIndex].synonym && (
+                    <p className="text-xs text-slate-400 mt-1.5">近义：{dueWords[currentIndex].synonym}</p>
+                  )}
                 </div>
+              ) : (
+                <div className="p-4 rounded-xl max-w-sm mx-auto">
+                  <p className="text-sm text-slate-400">先回忆这个词的意思...</p>
+                </div>
+              )}
+            </div>
+
+            {/* 按钮区 */}
+            {!revealed ? (
+              <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={() => handleRemove(item.word)}
-                  className="shrink-0 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                  onClick={() => goNext(false)}
+                  className="px-8 py-2.5 text-sm font-bold bg-rose-500 hover:bg-rose-600 text-white rounded-xl transition-colors shadow-md"
                 >
-                  删除
+                  ✗ 不认识
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRevealed(true)}
+                  className="px-8 py-2.5 text-sm font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-colors shadow-md"
+                >
+                  ✓ 认识
                 </button>
               </div>
-            ))
-          )}
-        </div>
+            ) : (
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => goNext(false)}
+                  className="px-6 py-2.5 text-sm font-bold bg-amber-500 hover:bg-amber-600 text-white rounded-xl transition-colors shadow-md"
+                >
+                  🤔 记错了
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goNext(true)}
+                  className="px-8 py-2.5 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors shadow-md"
+                >
+                  ✓ 下一词
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* 普通列表模式 */
+          <div className="overflow-y-auto px-6 py-4 space-y-3 bg-slate-50/50 flex-1">
+            {reviewMode && dueWords.length === 0 && (
+              <p className="text-center text-sm text-slate-400 py-8">🎉 暂无到期单词</p>
+            )}
+            {displayList.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-3xl mb-2">📖</p>
+                <p className="text-sm text-slate-400">暂无收藏单词，点击星号随时积累</p>
+              </div>
+            ) : (
+              displayList.map((item) => (
+                <div key={item.word} className="flex items-start justify-between gap-3 p-3.5 rounded-xl bg-white border border-slate-200/70 shadow-xs hover:border-indigo-300 transition-all">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <span className="font-bold text-slate-900 text-base">{item.word}</span>
+                      {item.phonetic ? <span className="text-xs text-slate-400 font-serif">{item.phonetic}</span> : null}
+                    </div>
+                    <p className="text-sm text-slate-700 mt-1">{item.meaning}</p>
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      {item.synonym ? <span className="text-[10px] text-slate-400">近义：{item.synonym}</span> : null}
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-medium">
+                        {getMasteryLabel(item.mastery)}
+                      </span>
+                      {item.nextReview ? (
+                        <span className="text-[10px] text-slate-400">
+                          下次复习：{new Date(item.nextReview).toLocaleDateString()}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => handleRemove(item.word)} className="shrink-0 px-2.5 py-1 text-xs text-rose-500 hover:bg-rose-50 rounded-lg transition-colors border border-rose-100">
+                    移除
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -92,7 +196,7 @@ export default function HomePage() {
       alert('请输入文章链接');
       return;
     }
-  
+
     setFetchingUrl(true);
     try {
       const res = await fetch('/api/fetch-url', {
@@ -100,21 +204,20 @@ export default function HomePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       });
-  
+
       if (!res.ok) {
         const err = await res.json().catch(() => null);
         throw new Error(err?.detail || `抓取失败（${res.status}）`);
       }
-  
+
       const data = await res.json();
-      // 清理不可见控制字符，避免 JSON 序列化失败
       const cleanText = data.text
         .replace(/[\u2018\u2019]/g, "'")
         .replace(/[\u201C\u201D]/g, '"')
         .replace(/[\u2013\u2014]/g, '-')
         .replace(/[\x00-\x1F\x7F-\x9F]/g, '');
       setArticle(cleanText);
-      
+
       alert(`抓取成功！文章标题：${data.title}，共 ${data.word_count} 词`);
     } catch (e) {
       alert(e instanceof Error ? e.message : '抓取失败，请稍后重试');
@@ -128,12 +231,12 @@ export default function HomePage() {
       alert('请先粘贴英文文章');
       return;
     }
-    // 清理文章中的特殊 Unicode 字符，替换为 ASCII 等价字符
+
     const cleanArticle = article
-      .replace(/[\u2018\u2019]/g, "'")   // 中文单引号 → 英文单引号
-      .replace(/[\u201C\u201D]/g, '"')   // 中文双引号 → 英文双引号
-      .replace(/[\u2013\u2014]/g, '-')   // 中文破折号 → 英文连字符
-      .replace(/[\x00-\x1F\x7F-\x9F]/g, ''); // 移除不可见控制字符
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/[\u2013\u2014]/g, '-')
+      .replace(/[\x00-\x1F\x7F-\x9F]/g, '');
 
     setLoading(true);
     try {
@@ -160,7 +263,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans" style={{ fontFamily: 'Inter, sans-serif' }}>
-      {/* 顶部导航栏 */}
       <nav className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2 text-lg font-semibold text-gray-800">
@@ -181,32 +283,29 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* 主体内容 */}
       <main className="max-w-3xl mx-auto px-6 py-12">
         <div className="bg-white rounded-2xl shadow-md p-8">
-          <h1 className="text-2xl font-bold text-gray-800 mb-2 text-center">
-            外刊精读解析器
-          </h1>
-          <p className="text-sm text-gray-500 mb-6 text-center">
-            粘贴英文外刊，一键生成考研级别精读笔记
-          </p>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2 text-center">外刊精读解析器</h1>
+          <p className="text-sm text-gray-500 mb-6 text-center">粘贴英文外刊，一键生成考研级别精读笔记</p>
+
           <div className="flex gap-2 mb-4">
-        <input
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="或粘贴文章链接（支持 FT、Economist 等）..."
-          disabled={fetchingUrl}
-          className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50"
-        />
-        <button
-          onClick={handleFetchUrl}
-          disabled={fetchingUrl || !url.trim()}
-          className="px-5 py-2.5 rounded-xl text-sm font-medium bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
-        >
-          {fetchingUrl ? '抓取中...' : '抓取文章'}
-        </button>
-      </div>
+            <input
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="或粘贴文章链接（支持 FT、Economist 等）..."
+              disabled={fetchingUrl}
+              className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50"
+            />
+            <button
+              onClick={handleFetchUrl}
+              disabled={fetchingUrl || !url.trim()}
+              className="px-5 py-2.5 rounded-xl text-sm font-medium bg-green-500 text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+            >
+              {fetchingUrl ? '抓取中...' : '抓取文章'}
+            </button>
+          </div>
+
           <textarea
             value={article}
             onChange={(e) => setArticle(e.target.value)}
@@ -222,25 +321,9 @@ export default function HomePage() {
           >
             {loading ? (
               <>
-                <svg
-                  className="animate-spin h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
                 AI 正在深度解析中...
               </>
@@ -250,13 +333,11 @@ export default function HomePage() {
           </button>
         </div>
 
-        {/* 底部说明 */}
         <p className="mt-6 text-center text-xs text-gray-400">
           支持 10,000 字长文 · AI 逐段精读 · 考研难度评级 · 课后习题自动生成
         </p>
       </main>
 
-      {/* 词汇本弹窗 */}
       <VocabModal open={vocabOpen} onClose={() => setVocabOpen(false)} />
     </div>
   );

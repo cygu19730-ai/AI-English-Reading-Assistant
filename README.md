@@ -16,11 +16,11 @@ markdown
 
 ### 界面截图（待补充）
 
-### ![开始界面](F:\AI-PROJECT\截图\开始界面.png)
+### ![开始界面](F:\AI-PROJECT\english-reader\images\onset.png)
 
 
 
-![结果界面](F:\AI-PROJECT\截图\结果界面.png)
+![结果界面](F:\AI-PROJECT\english-reader\images\result.png)
 
 ---
 

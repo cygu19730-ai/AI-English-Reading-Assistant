@@ -1,3 +1,5 @@
+// frontend/utils/vocab.ts
+
 export type VocabWord = {
   word: string;
   phonetic: string;
@@ -15,13 +17,48 @@ export type VocabWord = {
 };
 
 const STORAGE_KEY = 'vocabList';
-localStorage.removeItem('vocabList');
+
 // 间隔表（天）
 const INTERVALS = [1, 3, 7, 14, 30];
 
+// ========== 安全 localStorage 工具 ==========
+const safeLocalStorage = {
+  getItem: (key: string): string | null => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // ignore
+    }
+  },
+  removeItem: (key: string): void => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // ignore
+    }
+  },
+};
+
+// ========== 初始化：只在客户端执行清理 ==========
+// ⚠️ 移除顶层执行，改为函数调用
+export function clearVocabList(): void {
+  safeLocalStorage.removeItem(STORAGE_KEY);
+}
+
+// ========== 核心 CRUD ==========
 export function getVocabList(): VocabWord[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = safeLocalStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? (parsed as VocabWord[]) : [];
@@ -30,7 +67,16 @@ export function getVocabList(): VocabWord[] {
   }
 }
 
-export function addVocabWord(word: Omit<VocabWord, 'reviewCount' | 'correctCount' | 'wrongCount' | 'lastReviewed' | 'nextReview' | 'mastery'> & { reviewCount?: number; correctCount?: number; wrongCount?: number; lastReviewed?: string | null; nextReview?: string | null; mastery?: number }): void {
+export function addVocabWord(
+  word: Omit<VocabWord, 'reviewCount' | 'correctCount' | 'wrongCount' | 'lastReviewed' | 'nextReview' | 'mastery'> & {
+    reviewCount?: number;
+    correctCount?: number;
+    wrongCount?: number;
+    lastReviewed?: string | null;
+    nextReview?: string | null;
+    mastery?: number;
+  }
+): void {
   const list = getVocabList();
   if (list.some((item) => item.word === word.word)) return;
   list.push({
@@ -43,12 +89,12 @@ export function addVocabWord(word: Omit<VocabWord, 'reviewCount' | 'correctCount
     mastery: word.mastery ?? 0,
     dateAdded: word.dateAdded || new Date().toISOString(),
   });
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  safeLocalStorage.setItem(STORAGE_KEY, JSON.stringify(list));
 }
 
 export function removeVocabWord(word: string): void {
   const list = getVocabList().filter((item) => item.word !== word);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  safeLocalStorage.setItem(STORAGE_KEY, JSON.stringify(list));
 }
 
 export function isWordSaved(word: string): boolean {
@@ -86,7 +132,7 @@ export function reviewWord(word: string, isCorrect: boolean): void {
     mastery,
   };
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  safeLocalStorage.setItem(STORAGE_KEY, JSON.stringify(list));
 }
 
 export function getDueWords(): VocabWord[] {
@@ -100,4 +146,37 @@ export function getDueWords(): VocabWord[] {
 export function getMasteryLabel(mastery: number): string {
   const labels = ['未复习', '初级', '进行中', '较熟练', '熟练', '已掌握'];
   return labels[Math.min(mastery, 5)] ?? '未复习';
+}
+
+// ========== 批量操作 ==========
+export function addVocabWordsFromList(words: Array<Omit<VocabWord, 'reviewCount' | 'correctCount' | 'wrongCount' | 'lastReviewed' | 'nextReview' | 'mastery'>>): void {
+  const list = getVocabList();
+  const existingWords = new Set(list.map(item => item.word));
+  
+  const newWords = words
+    .filter(w => !existingWords.has(w.word))
+    .map(w => ({
+      ...w,
+      reviewCount: 0,
+      correctCount: 0,
+      wrongCount: 0,
+      lastReviewed: null,
+      nextReview: null,
+      mastery: 0,
+      dateAdded: w.dateAdded || new Date().toISOString(),
+    }));
+  
+  if (newWords.length > 0) {
+    safeLocalStorage.setItem(STORAGE_KEY, JSON.stringify([...list, ...newWords]));
+  }
+}
+
+export function getVocabStats(): { total: number; mastered: number; toReview: number } {
+  const list = getVocabList();
+  const mastered = list.filter(item => item.mastery >= 4).length;
+  return {
+    total: list.length,
+    mastered,
+    toReview: list.length - mastered,
+  };
 }

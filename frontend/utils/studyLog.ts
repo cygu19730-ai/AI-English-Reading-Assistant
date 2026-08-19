@@ -1,3 +1,5 @@
+// frontend/utils/studyLog.ts
+
 export type StudyRecord = {
   totalArticles: number;
   totalWords: number;
@@ -31,13 +33,34 @@ const EMPTY_RECORD: StudyRecord = {
   lastStudyDate: null,
 };
 
+// ========== 安全 localStorage 工具 ==========
+const safeLocalStorage = {
+  getItem: (key: string): string | null => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // localStorage can be unavailable in private browsing or storage-restricted contexts.
+    }
+  },
+};
+
+// ========== 工具函数 ==========
 function nowIso(): string {
   return new Date().toISOString();
 }
 
 function readStorage<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = safeLocalStorage.getItem(key);
     if (!raw) return fallback;
     return JSON.parse(raw) as T;
   } catch {
@@ -46,11 +69,7 @@ function readStorage<T>(key: string, fallback: T): T {
 }
 
 function writeStorage(key: string, value: unknown): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // localStorage can be unavailable in private browsing or storage-restricted contexts.
-  }
+  safeLocalStorage.setItem(key, JSON.stringify(value));
 }
 
 function normalizeHistory(history: ArticleHistory[]): ArticleHistory[] {
@@ -61,6 +80,7 @@ function normalizeHistory(history: ArticleHistory[]): ArticleHistory[] {
   }));
 }
 
+// ========== 核心功能 ==========
 export function getStudyLog(): StudyRecord {
   const stored = readStorage<Partial<StudyRecord>>(STUDY_KEY, EMPTY_RECORD);
   return {
@@ -151,3 +171,37 @@ export function getCorrectRate(): number {
   );
 }
 
+// ========== 额外辅助函数 ==========
+export function clearStudyLog(): void {
+  writeStorage(STUDY_KEY, EMPTY_RECORD);
+}
+
+export function clearArticleHistory(): void {
+  writeStorage(HISTORY_KEY, []);
+}
+
+export function getStudyStats(): {
+  totalArticles: number;
+  totalWords: number;
+  totalExercises: number;
+  correctRate: number;
+  totalReviews: number;
+} {
+  const log = getStudyLog();
+  return {
+    totalArticles: log.totalArticles,
+    totalWords: log.totalWords,
+    totalExercises: log.totalExercisesCompleted,
+    correctRate: getCorrectRate(),
+    totalReviews: log.totalReviews,
+  };
+}
+
+export function getTodayStudyTime(): number {
+  const log = getStudyLog();
+  if (!log.lastStudyDate) return 0;
+  const lastStudy = new Date(log.lastStudyDate);
+  const today = new Date();
+  // 如果上次学习是今天，返回 1（表示今天有学习）
+  return lastStudy.toDateString() === today.toDateString() ? 1 : 0;
+}

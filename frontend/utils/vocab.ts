@@ -15,7 +15,7 @@ export type VocabWord = {
 };
 
 const STORAGE_KEY = 'vocabList';
-
+localStorage.removeItem('vocabList');
 // 间隔表（天）
 const INTERVALS = [1, 3, 7, 14, 30];
 

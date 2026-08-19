@@ -447,6 +447,23 @@ export default function HomePage() {
       alert('请输入文章链接');
       return;
     }
+  
+    setFetchingUrl(true);
+    try {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://ai-english-reading-assistant.onrender.com';
+      
+      // ✅ 同样使用反引号
+      const res = await fetch(`${API_BASE}/api/fetch-url`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+  
+      // ... 其余代码
+    } catch (e) {
+      // ...
+    }
+  };
 
     setFetchingUrl(true);
     try {
@@ -483,28 +500,30 @@ export default function HomePage() {
       alert('请先粘贴英文文章');
       return;
     }
-
+  
     const cleanArticle = article
       .replace(/[\u2018\u2019]/g, "'")
       .replace(/[\u201C\u201D]/g, '"')
       .replace(/[\u2013\u2014]/g, '-')
       .replace(/[\x00-\x1F\x7F-\x9F]/g, '');
-
+  
     setLoading(true);
     try {
       const profile = getUserProfile();
-      const API_BASE = 'https://ai-english-reading-assistant.onrender.com';
-      const res = await fetch('${API_BASE}/api/parse', {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://ai-english-reading-assistant.onrender.com';
+      
+      // ✅ 正确：使用反引号 ` 包裹模板字符串
+      const res = await fetch(`${API_BASE}/api/parse`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ article: cleanArticle, profile }),
       });
-
+  
       if (!res.ok) {
         const err = await res.json().catch(() => null);
         throw new Error(err?.detail || `请求失败（${res.status}）`);
       }
-
+  
       const data = await res.json();
       sessionStorage.setItem('parseResult', JSON.stringify(data));
       const wordCount = cleanArticle.split(/\s+/).filter(Boolean).length;
@@ -516,7 +535,6 @@ export default function HomePage() {
       setLoading(false);
     }
   };
-
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans" style={{ fontFamily: 'Inter, sans-serif' }}>
       <nav className="bg-white border-b border-gray-200 shadow-sm">

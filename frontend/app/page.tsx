@@ -431,10 +431,16 @@ export default function HomePage() {
   const [vocabOpen, setVocabOpen] = useState(false);
   const [studyOpen, setStudyOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [profileNavLabel, setProfileNavLabel] = useState('设置目标');
   const [url, setUrl] = useState('');
   const [fetchingUrl, setFetchingUrl] = useState(false);
   const [articleTitle, setArticleTitle] = useState('');
   const router = useRouter();
+
+  useEffect(() => {
+    if (profileOpen) return;
+    setProfileNavLabel(getUserProfile() ? `🎯 ${getProfileLabel()}` : '设置目标');
+  }, [profileOpen]);
 
   const handleFetchUrl = async () => {
     if (!url.trim()) {
@@ -487,7 +493,8 @@ export default function HomePage() {
     setLoading(true);
     try {
       const profile = getUserProfile();
-      const res = await fetch('/api/parse', {
+      const API_BASE = 'https://ai-english-reading-assistant.onrender.com';
+      const res = await fetch('${API_BASE}/api/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ article: cleanArticle, profile }),
@@ -523,7 +530,7 @@ export default function HomePage() {
               onClick={() => setProfileOpen(true)}
               className="px-3 py-1.5 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             >
-              {getUserProfile() ? `🎯 ${getProfileLabel()}` : '设置目标'}
+              {profileNavLabel}
             </button>
             <button
               onClick={() => setVocabOpen(true)}

@@ -452,32 +452,18 @@ export default function HomePage() {
     try {
       const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://ai-english-reading-assistant.onrender.com';
       
-      // ✅ 同样使用反引号
+      // ✅ 修复：使用完整 URL 和正确的模板字符串（反引号）
       const res = await fetch(`${API_BASE}/api/fetch-url`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       });
   
-      // ... 其余代码
-    } catch (e) {
-      // ...
-    }
-  };
-
-    setFetchingUrl(true);
-    try {
-      const res = await fetch('/api/fetch-url', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      });
-
       if (!res.ok) {
         const err = await res.json().catch(() => null);
         throw new Error(err?.detail || `抓取失败（${res.status}）`);
       }
-
+  
       const data = await res.json();
       const cleanText = data.text
         .replace(/[\u2018\u2019]/g, "'")
@@ -486,7 +472,7 @@ export default function HomePage() {
         .replace(/[\x00-\x1F\x7F-\x9F]/g, '');
       setArticle(cleanText);
       setArticleTitle(data.title || '外刊精读');
-
+  
       alert(`抓取成功！文章标题：${data.title}，共 ${data.word_count} 词`);
     } catch (e) {
       alert(e instanceof Error ? e.message : '抓取失败，请稍后重试');
@@ -494,7 +480,7 @@ export default function HomePage() {
       setFetchingUrl(false);
     }
   };
-
+  
   const handleParse = async () => {
     if (!article.trim()) {
       alert('请先粘贴英文文章');

@@ -1,304 +1,660 @@
-markdown
 # 📖 AI English Reading Assistant
 
-> 一款面向考研及英语学习者的 AI 外刊精读产品。
-> 粘贴一篇英文文章，自动生成个性化精读笔记：词汇标注、熟词僻义、长难句拆解、课后练习、间隔重复复习。
+> **A personalized AI-powered reading and learning assistant for English learners.**
 
-**一句话定位**：把"AI 文章解析器"升级为"个性化 AI 学习系统"。
+一个面向考研、CET-6、IELTS、TOEFL 等英语学习者的 **AI 外刊精读与学习系统**。
+
+用户只需粘贴英文文章或输入文章 URL，系统即可基于用户的考试目标与英语水平，自动生成：
+
+- 📚 重难点词汇（音标 / 释义 / 同义词）
+- 🔍 熟词僻义识别
+- 🧩 长难句结构分析
+- 🇨🇳 段落翻译与总结
+- 📝 阅读理解与翻译练习
+- 🧠 间隔重复复习
+- 📊 学习数据追踪
+
+**一句话定位**：把一次性的「AI 文章解析」升级为持续性的「个性化 AI 学习系统」。
+
+**🚀 [Live Demo](https://ai-english-reading-assistant.netlify.app/)** ·
+**💻 [GitHub](https://github.com/cygu19730-ai/AI-English-Reading-Assistant)**
+
+`AI + User Profile + Learning Science`
+
+![Homepage](images/onset.png)
 
 ---
 
-## 🎯 Demo
+## 🚀 Live Demo
 
-### 在线体验
+### 👉 [体验 AI English Reading Assistant](https://ai-english-reading-assistant.netlify.app/)
 
-> 本地运行后访问 `http://localhost:3000`
+无需安装，打开网页即可体验完整功能：设置用户画像 → 粘贴文章或输入 URL → 获得 AI 精读解析。
 
-### 界面截图
+全栈公网部署：
 
-### ![开始界面](images/onset.png)
+| 服务 | 平台 | 地址 |
+|------|------|------|
+| Frontend (Next.js) | Netlify | https://ai-english-reading-assistant.netlify.app/ |
+| Backend (FastAPI) | Render | https://ai-english-reading-assistant.onrender.com/ |
 
-
-
-![结果界面](images/result.png)
+> ⚠️ Demo 使用真实 LLM API 进行文章解析。后端部署在 Render 免费实例上，长时间无人访问时会休眠，**首次请求可能需要等待约 30–60 秒冷启动**；较长文章的解析也需要一定处理时间。
 
 ---
 
-## 💡 Why（用户痛点）
+## 🎬 Product Preview
+
+完整产品流程：**首页 → 用户画像 → AI 精读解析 → 学习看板**
+
+### 首页 — 文章输入
+
+![Homepage](images/onset.png)
+
+### 用户画像 — 考试类型与英语水平
+
+![User Profile](images/profile.png)
+
+### AI 精读结果 — 左右分栏沉浸式阅读
+
+![Reading Analysis](images/result.png)
+
+### 学习看板 — 学习数据与复习追踪
+
+![Learning Dashboard](images/dashboard.png)
+
+---
+
+## 💡 Why I Built This
+
+传统英文精读通常需要在多个工具之间切换：
+
+> 外刊文章 → 查词典 → 看翻译 → 分析长难句 → 找题目 → 记录生词 → 背单词
+
+这些工具解决的是单点问题，却很难形成完整的学习闭环。
+
+同时，大多数 AI 阅读工具存在一个共同问题：
+
+> **同一篇文章，对不同水平的用户生成几乎相同的解析。**
 
 | 痛点 | 现有解决方案的不足 |
 |------|------------------|
 | 外刊文章看不懂 | 查词典费时，翻译软件只给结果不教方法 |
 | 不知道哪些是考点 | 精读笔记靠人工整理，效率极低 |
 | 单词背了就忘 | 背单词 App 脱离语境，记住的是孤立词义 |
-| 做题没有反馈 | 真题做完对答案，不知道错在哪、为什么错 |
+| 做题没有反馈 | 真题做完对答案，不知道错在哪 |
 | AI 产品不够个性化 | 所有人生成的解析完全一样，忽视个体差异 |
 
-**我的方案**：把 AI 解析、认知科学（间隔重复）、用户画像三者结合，让每个用户获得适合自己的精读体验。
+因此，我希望构建一个由：
+
+> **AI + User Profile + Learning Science**
+
+驱动的英语学习产品。核心思路：
+
+```text
+        User Profile
+     (考试目标 / 水平)
+              │
+              ▼
+        English Article
+              │
+              ▼
+     Personalized LLM Analysis
+              │
+       ┌──────┼──────┐
+       ▼      ▼      ▼
+    Vocabulary Sentence Exercise
+       │      │      │
+       └──────┼──────┘
+              ▼
+       Learning Record
+              │
+              ▼
+      Spaced Repetition
+              │
+              ▼
+       Continuous Learning
+```
 
 ---
 
 ## 🎯 Target Users
 
-| 用户群 | 需求 | 产品价值 |
-|--------|------|---------|
-| 考研学生 | 外刊是考研阅读题源，需要精读训练 | 自动标注考点、生成考研风格练习 |
-| 六级/雅思/托福考生 | 提升阅读速度和词汇量 | 按考试类型调整解析策略 |
-| 英语自学者 | 想读外刊但缺乏指导 | AI 逐段拆解，降低阅读门槛 |
+| 用户群体 | 核心需求 | 产品价值 |
+|---------|---------|---------|
+| 考研英语学习者 | 外刊精读、长难句、阅读理解 | 自动提取考点并生成考研风格练习 |
+| CET-6 / IELTS / TOEFL 学习者 | 提升阅读能力与词汇量 | 根据考试目标调整解析策略 |
+| 英语自学者 | 缺乏系统的精读指导 | AI 逐段拆解文章，降低学习门槛 |
 
-**核心用户画像**：23 岁考研学生，英语基础中等，每天 30-60 分钟学习时间，需要高效的精读工具而非泛读内容。
-
----
-
-## 🔄 Product Workflow
-首次使用
-↓
-设置用户画像（考试类型 + 水平 + 目标分数）
-↓
-输入文章（URL 抓取 / 手动粘贴）
-↓
-AI 个性化解析（根据画像调整策略）
-↓
-左右分栏沉浸式阅读（原文 + 逐段精讲）
-↓
-收藏生词 → 间隔重复复习
-↓
-完成练习 → 记录正确率
-↓
-学习看板追踪进度
-
-text
+**Core User Persona**：23 岁左右、英语中等水平、每天拥有 30–60 分钟学习时间，希望通过外刊提升阅读能力的学习者。
 
 ---
 
 ## ✨ Core Features
 
-### 1. AI 文章解析
+### 1. 🤖 AI Article Analysis
 
-- 自动分段 + 重难点词标注（音标/释义/同义词）
+输入文章（手动粘贴或 URL 自动抓取）后，AI 自动完成结构化精读：
+
+- 自动识别文章主题与核心论点（article_meta）
+- 自动分段
+- 重难点词汇识别（音标、释义、同义词）
 - 熟词僻义识别（考研核心考点）
-- 长难句语法拆解
-- 段落翻译 + 总结
-- 自动生成单选/翻译题
+- 长难句结构分析
+- 段落翻译 + 段落总结
+- 自动生成阅读理解题（单选）与翻译练习
 
-### 2. 个性化用户画像
+### 2. 🎯 Personalized Learning
 
-- 考试类型：考研 / CET-6 / IELTS / TOEFL
-- 水平等级：基础 / 中等 / 较强
-- 画像直接注入 LLM 提示词，影响解析策略
+用户首次使用时可以设置：
 
-### 3. 间隔重复复习（Spaced Repetition）
+- 考试类型：考研英语 / CET-6 / IELTS / TOEFL
+- 英语水平：基础 / 中等 / 较强
+- 目标分数（可选）
 
-- 1/3/7/14/30 天复习间隔
-- 掌握度 0-5 级追踪
-- 主动回忆式交互（先想词义，再判断认识与否）
-- "不认识"和"记错了"都触发间隔重置
+用户画像会通过 `build_profile_prompt()` 注入 LLM Prompt，并改变 AI 的解析策略：
 
-### 4. 学习数据看板
+| 水平 | 词汇解析 | 长难句 | 练习 |
+|------|---------|--------|------|
+| 基础 | 更详细的解释 | 更细粒度拆解 | 难度略低 |
+| 中等 | 标准解析 | 重点分析关键从句 | 强化熟词僻义，接近考试难度 |
+| 较强 | 减少基础词汇 | 聚焦复杂结构 | 增加逻辑推断型练习 |
 
-- 累计阅读词数、完成练习数、正确率
-- 词汇掌握统计
-- 最近阅读历史
+因此：**同一篇文章，不同用户可以获得不同的信息密度与学习重点。**
 
----
+### 3. 🧠 Spaced Repetition
 
-## 🏗 AI Architecture
-用户输入
-↓
-┌─────────────────────────────────────┐
-│ FastAPI 后端 │
-│ │
-│ ┌─────────────────────────────┐ │
-│ │ Prompt 构建层 │ │
-│ │ SYSTEM_PROMPT（基础解析） │ │
-│ │ + build_profile_prompt（画像）│ │
-│ └─────────────────────────────┘ │
-│ ↓ │
-│ ┌─────────────────────────────┐ │
-│ │ LLM 调用层 │ │
-│ │ DeepSeek chat │ │
-│ │ max_tokens=8000 │ │
-│ │ temperature=0.3 │ │
-│ └─────────────────────────────┘ │
-│ ↓ │
-│ ┌─────────────────────────────┐ │
-│ │ 输出验证层 │ │
-│ │ 1. repair_json（语法修复） │ │
-│ │ 2. Pydantic Schema 校验 │ │
-│ │ 3. 内容质量检查 │ │
-│ └─────────────────────────────┘ │
-└─────────────────────────────────────┘
-↓
-前端左右分栏展示
+将阅读过程中遇到的生词转化为长期学习内容。
 
+系统为每个单词记录：
+
+```text
+word / meaning / reviewCount / correctCount /
+wrongCount / lastReviewed / nextReview / mastery
+```
+
+复习间隔：
+
+```text
+1 → 3 → 7 → 14 → 30 days
+```
+
+并通过用户的复习行为（主动回忆 → 判断是否掌握）动态更新掌握程度，"不认识"和"记错了"都会触发间隔重置。
+
+相比简单的「收藏单词」，目标是形成：
+
+> **阅读 → 练习 → 复习 → 再学习** 的学习闭环。
+
+### 4. 📊 Learning Dashboard
+
+系统记录用户学习行为，包括：累计阅读词数、完成练习数量、练习正确率、生词掌握情况、最近学习记录、待复习词汇。让用户能够看到：
+
+> **"我学了什么，以及我掌握得怎么样。"**
 
 ---
 
-## 🧠 LLM Design
+## 🏗️ AI Architecture
 
-### Prompt 设计
+```text
+                         User
+                           │
+                           ▼
+              ┌──────────────────────┐
+              │  Netlify Deployment  │
+              │  ┌────────────────┐  │
+              │  │ Next.js 16     │  │
+              │  │ Frontend       │  │
+              │  │                │  │
+              │  │ Article / URL  │  │
+              │  │ User Profile   │  │
+              │  │ Reading UI     │  │
+              │  │ Vocabulary     │  │
+              │  │ Dashboard      │  │
+              │  └────────┬───────┘  │
+              └───────────┼──────────┘
+                          │ /api/parse, /api/fetch-url
+                          ▼
+              ┌──────────────────────┐
+              │  Render Deployment   │
+              │  ┌────────────────┐  │
+              │  │ FastAPI        │  │
+              │  │ Backend        │  │
+              │  └───────┬────────┘  │
+              └──────────┼───────────┘
+                         ▼
+              ┌─────────────────────┐
+              │   Prompt Builder    │
+              │                     │
+              │  SYSTEM_PROMPT      │
+              │         +           │
+              │  User Profile       │
+              └─────────┬───────────┘
+                        ▼
+              ┌─────────────────────┐
+              │    DeepSeek LLM     │
+              │                     │
+              │  Structured JSON    │
+              │    Generation       │
+              └─────────┬───────────┘
+                        ▼
+              ┌─────────────────────┐
+              │  Output Validation  │
+              │                     │
+              │  JSON Repair        │
+              │  Pydantic Schema    │
+              │  Content Validation │
+              └─────────┬───────────┘
+                        ▼
+              ┌─────────────────────┐
+              │  Structured Result  │
+              └─────────┬───────────┘
+                        ▼
+         Reading + Practice + Review
+```
 
-**基础 SYSTEM_PROMPT**：
-- 定义 JSON 输出结构（article_meta + segments）
-- 约束字段格式（answer 只能是 A/B/C/D）
-- 灵活出题策略（信息量足够的段落才出题）
+---
 
-**画像注入**（build_profile_prompt）：
-- 基础水平 → 词汇解释更详细，长难句拆解到最细
-- 中等水平 → 标准解析，重点标注熟词僻义
-- 较强水平 → 减少基础词汇，强化逻辑推断题
+## 🧠 LLM Application Design
 
-### Structured Output 处理
+### Prompt Architecture
 
-LLM 输出不直接信任，经过三层验证：
+LLM 输入不是简单的 `Article → LLM`，而是：
 
-```python
-# Layer 1: JSON 语法修复
-repair_json(raw)  # 修复缺失逗号、截断等常见错误
+```text
+SYSTEM_PROMPT（JSON Schema + 解析/出题/难度规则）
+        +
+User Profile（考试类型 / 水平 / 目标分数）
+        +
+ARTICLE
+        ↓
+    DeepSeek
+```
 
-# Layer 2: Pydantic Schema 校验
-ParseResponse(segments=segments)
-# - answer 自动归一化 A/B/C/D
-# - options 自动补全前缀，强制 4 个
-# - 字段缺失自动填充默认值
+**System Prompt** 定义：
 
-# Layer 3: 内容质量检查
-# - original_text 必须非空
-# - 整篇至少 1 道练习题
-📊 Evaluation
-当前评估方式
-维度	方法
-JSON 合法性	json.loads() 成功率统计
-Schema 通过率	Pydantic 校验通过率
-字段完整性	关键字段非空检查
-练习题数量	整篇至少 1 题，记录实际分布
-未来评估计划
-构建 50 篇标注外刊的测试集
+- 输出 JSON Schema（article_meta + segments）
+- 文章解析任务与分段规则
+- 词汇识别与熟词僻义规则
+- 长难句识别规则
+- 出题策略（信息量足够的段落才出题）
+- 难度评分规则（1–5）
 
-指标：词汇识别准确率、翻译质量 BLEU 分数、练习题质量人工评分
+**User Profile Prompt** 根据用户画像动态调整：
 
-记录不同画像下的解析差异，验证个性化效果
+- 词汇解释粒度
+- 长难句分析深度
+- 翻译风格
+- 练习题难度与题型
 
-🎨 Personalization
-用户画像 → AI 行为
-画像维度	影响
-备考方向	调整练习题风格（考研侧重推理，雅思侧重同义替换）
-英语水平	控制词汇解释详细度、长难句拆解粒度
-目标分数	可选，影响难度评级参考
-学习记录 → 复习策略
-每个单词的掌握度（0-5）基于用户复习行为动态变化
+画像注入是「追加」而非「覆盖」基础提示词，保证稳定性。
 
-到期单词自动提醒，未到期不打扰
+---
 
-正确率数据反馈到学习看板
+## 🛡️ Structured Output & Reliability
 
-🛠 Tech Stack
-层	技术	选择理由
-前端框架	Next.js 16 (App Router)	SSR 支持，部署方便
-UI	Tailwind CSS + shadcn/ui	快速构建专业界面
-后端	Python FastAPI	轻量、类型安全、自动文档
-AI	DeepSeek	国内可访问、便宜、中文理解强
-数据验证	Pydantic v2	Schema 校验 + 自动纠错
-内容提取	trafilatura	开源、提取质量高
-存储	localStorage	零后端成本，快速验证
-🔧 Engineering Challenges
-挑战 1：LLM 输出不稳定
-问题：DeepSeek 偶尔返回非法 JSON（缺失逗号、截断、字段格式错误）。
+LLM 输出不能直接交给前端使用。因此后端设计了三层输出处理：
 
-解决：
+```text
+LLM Raw Output
+       │
+       ▼
+┌──────────────────────┐
+│ Layer 1              │
+│ JSON Repair          │
+│ repair_json()        │
+└──────────┬───────────┘
+           ▼
+┌──────────────────────┐
+│ Layer 2              │
+│ Pydantic Validation  │
+│ Schema Validation    │
+│ Field Validation     │
+└──────────┬───────────┘
+           ▼
+┌──────────────────────┐
+│ Layer 3              │
+│ Content Validation   │
+│ Required Fields      │
+│ Exercise Validation  │
+└──────────┬───────────┘
+           ▼
+     Frontend Result
+```
 
-repair_json() 用正则修复常见语法错误
+例如：
 
-Pydantic 自动纠正字段格式
+- `answer` 自动归一化为 `A/B/C/D`（`"A. xxx"` → `"A"`）
+- 选择题强制 4 个选项，自动补全选项前缀
+- 缺失字段提供默认值
+- `original_text` 必须非空
+- 整篇文章必须包含至少 1 道练习题
 
-三层验证确保前端永远拿到干净数据
+这样做的核心目标是：
 
-挑战 2：国内网络限制
-问题：OpenAI 无法充值，BBC 等网站无法访问。
+> **降低 LLM 输出格式不稳定对产品体验的影响，确保前端永远拿到干净数据。**
 
-解决：
+---
 
-改用 DeepSeek（支付宝可充值）
+## 🔧 Engineering Challenges
 
-放弃 OpenAI SDK，用 requests 直连
+### Challenge 1 — LLM Output Reliability
 
-URL 抓取适配国内可访问的英文源
+**Problem**：LLM 并不总是严格遵守 JSON 格式，可能出现缺失逗号、Markdown code block 包裹、输出截断、字段格式不一致、选择题答案格式异常。
 
-挑战 3：个性化与通用性的平衡
-问题：画像太细会导致提示词复杂，解析质量下降。
+**Solution**：设计 `JSON Repair → Pydantic Validation → Content Validation` 三层处理管线，而不是直接 `json.loads(llm_output)`。
 
-解决：
+### Challenge 2 — Long Article Processing
 
-画像只分 3 档（基础/中等/较强）
+**Problem**：长文章会显著增加 Prompt 长度、Output Token 数、JSON 截断风险与 API 请求时间。
 
-每档的调整规则明确，不模糊
+**Solution**：
 
-画像注入是"追加"而非"覆盖"基础提示词
+- `max_tokens=8000` 扩大输出空间
+- API timeout 延长至 300 秒
+- 前端限制输入约 **10,000 words**
+- 对输出结构进行验证
 
-挑战 4：长文处理
-问题：超长文章导致 JSON 截断。
+### Challenge 3 — Personalization vs. Generality
 
-解决：
+**Problem**：用户画像越复杂，Prompt 越长、约束越多，生成稳定性可能下降。
 
-max_tokens=8000 扩大输出空间
+**Solution**：画像只分 `Basic / Intermediate / Advanced` 三个主要能力层级，每档调整规则明确、不模糊。让个性化规则**简单、明确、可控**。
 
-超时延长到 300 秒
+### Challenge 4 — 网络与部署环境限制
 
-前端限制输入 10,000 词
+**Problem**：开发过程中遇到国内网络限制（OpenAI 无法充值、部分外刊网站无法访问）。
 
-📈 Product Iteration
-V0 — 验证可行性（已完成）
-直接调 DeepSeek API + 简单展示
+**Solution**：
 
-发现：核心解析质量 OK，但缺乏个性化
+- 改用 DeepSeek（国内可访问、可充值、中文理解强）
+- 放弃 OpenAI SDK，用 `requests` 直连 API
+- URL 抓取适配国内可访问的英文源
+- 前后端分别部署至 Netlify 与 Render，前端通过 `NEXT_PUBLIC_API_URL` 环境变量配置后端地址
 
-V1 — 完善核心功能（已完成）
-加入 Schema Validation
+---
 
-生词本 + 间隔重复
+## 📈 Product Iteration
 
-URL 抓取
+项目并不是一次性完成，而是按照产品迭代逐步开发：
 
-左右分栏 UI
+```text
+V0 — 可行性验证 ✅
+│  DeepSeek API 直调 + 简单展示
+│  发现：核心解析质量 OK，但缺乏个性化
+▼
+V1 — 核心功能 ✅
+│  Structured Output + Pydantic Validation
+│  URL 抓取 / 生词本 / 间隔重复 / 左右分栏 UI
+▼
+V2 — 个性化学习系统 ✅
+│  User Profile 驱动解析策略
+│  文章级概览 / 学习数据看板
+▼
+V3 — Public MVP ✅
+│  Netlify (前端) + Render (后端) 全栈公网部署
+▼
+V4 — Evaluation → 下一阶段
+   人工标注测试集 + 内容质量评估
+```
 
-V2 — 个性化 + 学习系统（当前）
-用户画像驱动解析策略
+核心迭代逻辑：
 
-学习数据看板
+> **从"能生成" → "生成稳定" → "个性化" → "形成学习闭环" → "真实部署"。**
 
-文章级概览
+---
 
-V3 — 社交 + 部署（未来）
-用户登录 + 多设备同步
+## 📊 Evaluation
 
-学习社区（分享精读笔记）
+当前项目已实现工程层面的输出质量检查：
 
-公开部署
+| Evaluation Dimension | Current Method |
+|----------------------|----------------|
+| JSON Validity | `json.loads()` 成功率 |
+| Schema Validity | Pydantic 校验通过率 |
+| Field Completeness | 关键字段非空检查 |
+| Exercise Generation | 最少练习题数量校验 |
+| Output Structure | Structured response schema |
 
-🗺 Roadmap
-优先级	功能	说明
-P0	部署上线	Vercel + Railway，获得公网链接
-P0	AI 随堂助教	右下角浮窗，针对文章内容问答
-P1	历史记录回看	LZ-String 压缩存储，点开历史直接恢复解析
-P1	用户系统	Supabase Auth + 数据库，多设备同步
-P2	评测体系	50 篇标注外刊测试集 + 指标统计
-P2	导出笔记	PDF 导出精读笔记
-P3	学习社区	用户分享精读笔记，互动
-📁 项目结构
-text
-waikan-ai-reader/
+### Next Evaluation Stage
+
+下一阶段计划建立小规模人工标注数据集，对以下能力进行评估：
+
+- 重难点词识别、熟词僻义识别
+- 长难句识别与拆解质量
+- 段落总结与翻译质量
+- 阅读理解题质量
+- 不同用户画像下的个性化差异
+
+> **目前尚未人为构造或虚报模型准确率，后续指标将在实际评测后补充。**
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| Frontend | Next.js 16 (App Router) | Web application |
+| UI | React 19 + TypeScript + Tailwind CSS + shadcn/ui | Interface |
+| Backend | Python + FastAPI | API service |
+| LLM | DeepSeek Chat | Article analysis & generation |
+| Validation | Pydantic v2 | Structured output validation |
+| Article Extraction | Trafilatura | URL content extraction |
+| Storage | Browser localStorage | User profile & learning data |
+| Frontend Deployment | Netlify | Public frontend hosting |
+| Backend Deployment | Render | Public API hosting |
+
+---
+
+## 📁 Project Structure
+
+```text
+AI-English-Reading-Assistant/
+│
 ├── backend/
-│   ├── main.py                 # API + Prompt + Validation
+│   ├── main.py                 # API + Prompt + 三层验证
+│   ├── test_api.py             # API 集成测试
+│   ├── test_chema.py           # Pydantic Schema 纠错测试
 │   └── requirements.txt
+│
 ├── frontend/
 │   ├── app/
-│   │   ├── page.tsx            # 首页 + 3 个弹窗
+│   │   ├── page.tsx            # 首页 + 生词本/画像/学习记录弹窗
 │   │   └── result/
-│   │       └── page.tsx        # 结果页（左右分栏）
+│   │       └── page.tsx        # 结果页（左右分栏精读）
+│   │
+│   ├── components/ui/          # shadcn/ui 组件
+│   │
 │   ├── utils/
 │   │   ├── vocab.ts            # 生词本 + 间隔重复
 │   │   ├── studyLog.ts         # 学习记录
 │   │   └── userProfile.ts      # 用户画像
-│   └── components/ui/          # shadcn 组件
-└── package.json                # 一键启动
+│   │
+│   └── netlify.toml            # Netlify 部署配置
+│
+├── images/
+│   ├── onset.png               # 首页输入界面
+│   ├── profile.png             # 用户画像弹窗
+│   ├── result.png              # AI 精读结果页
+│   └── dashboard.png           # 学习记录看板
+│
+├── package.json                # 一键启动脚本
+└── README.md
 ```
+
+---
+
+## 🚀 Local Development
+
+### 1. Clone
+
+```bash
+git clone https://github.com/cygu19730-ai/AI-English-Reading-Assistant.git
+cd AI-English-Reading-Assistant
+```
+
+### 2. Backend
+
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+Create `.env`:
+
+```env
+DEEPSEEK_API_KEY=your_api_key
+```
+
+Start FastAPI:
+
+```bash
+uvicorn main:app --reload
+```
+
+Backend API: `http://localhost:8000` · Health check: `http://localhost:8000/health`
+
+```json
+{ "status": "ok" }
+```
+
+### 3. Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000`
+
+> 根目录也提供一键启动：`npm run install:all && npm run dev`（concurrently 同时启动前后端）。
+
+---
+
+## 🔐 Environment Variables
+
+Backend (`backend/.env`):
+
+```env
+DEEPSEEK_API_KEY=your_api_key
+```
+
+Frontend (optional, defaults to the deployed Render backend):
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+> Do not commit API keys to GitHub. `.env` is already gitignored.
+
+---
+
+## 🧪 Example User Journey
+
+```text
+1.  打开应用
+2.  设置考试类型与英语水平
+3.  粘贴英文文章 / 输入文章 URL
+4.  开始 AI 分析
+5.  左右分栏阅读原文 + 逐段精讲
+6.  复习重难点词汇
+7.  完成自动生成的练习
+8.  收藏生词
+9.  通过间隔重复复习生词
+10. 在学习看板追踪进度
+```
+
+---
+
+## 🎯 Product Philosophy
+
+这个项目并不是单纯追求"让 LLM 生成更多内容"，而是尝试解决一个更具体的问题：
+
+> **如何把一次性的 LLM 内容生成，转化为能够持续帮助用户学习的产品体验？**
+
+整个产品围绕三个核心变量设计：
+
+```text
+              AI
+               │
+               ▼
+        Personalized
+               │
+               ▼
+        Learning Loop
+               │
+        ┌──────┴──────┐
+        ▼             ▼
+   User Profile   Learning Data
+        │             │
+        └──────┬──────┘
+               ▼
+     Better Next Review
+```
+
+---
+
+## 🗺️ Roadmap
+
+### P0 — Product Validation ✅
+
+- [x] Public Web Demo（Netlify + Render 全栈部署）
+- [x] Core AI Article Analysis
+- [x] User Profile & Personalized Prompt
+- [x] Structured Output Validation
+- [x] Vocabulary Book & Spaced Repetition
+- [x] Learning Dashboard
+- [ ] Small-scale user testing
+- [ ] LLM evaluation dataset
+
+### P1 — Learning Intelligence
+
+- [ ] Article history（历史精读回看）
+- [ ] Cross-article learning memory
+- [ ] Personalized review recommendation
+- [ ] AI 随堂助教（针对文章内容问答）
+
+### P2 — Product Infrastructure
+
+- [ ] User authentication
+- [ ] Cloud database
+- [ ] Multi-device synchronization
+- [ ] Export learning notes（PDF 导出精读笔记）
+
+---
+
+## 👨‍💻 About the Project
+
+This project was independently designed and developed as a **Cognitive Science × AI Product** exploration.
+
+My background in psychology and cognitive neuroscience influenced several product decisions. The product incorporates **learning-science-inspired mechanisms** such as spaced repetition, personalized learning, user-level adaptation, and learning feedback loops.
+
+The project combines:
+
+> **Psychology / Cognitive Science + AI Application Development + Product Design**
+
+---
+
+## 📌 Key Takeaways
+
+Through this project, I explored the complete lifecycle of an AI application:
+
+```text
+Problem Definition → User Persona → Product Design →
+LLM Integration → Prompt Engineering → Structured Output →
+Reliability Validation → Learning System → Deployment →
+Evaluation → Iteration
+```
+
+---
+
+## 🔗 Links
+
+- 🌐 **Live Demo:** https://ai-english-reading-assistant.netlify.app/
+- 💻 **GitHub:** https://github.com/cygu19730-ai/AI-English-Reading-Assistant
+- ⚙️ **Backend API:** https://ai-english-reading-assistant.onrender.com/health
+
+---
+
+## 📄 License
+
+For learning and portfolio purposes.
